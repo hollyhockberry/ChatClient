@@ -18,6 +18,7 @@ struct ChatUsage {
 class ChatClient {
   WiFiClientSecure _WiFiClient;
   const String _API_KEY;
+  std::vector<String> _System;
   std::vector<String> _History;
   int _MaxHistory = 5;
   uint16_t _TimeOut = 0;
@@ -28,6 +29,9 @@ class ChatClient {
 
   void begin();
 
+  void ClearSystem();
+  void AddSystem(const char* content);
+  
   bool Chat(const char* message, String& response, ChatUsage* usage = nullptr);
 
   uint16_t TimeOut() const {

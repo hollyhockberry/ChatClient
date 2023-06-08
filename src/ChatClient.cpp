@@ -10,7 +10,7 @@ namespace {
 constexpr static const char* API_URL = "https://api.openai.com/v1/chat/completions";
 }  // namespace
 
-ChatClient::ChatClient(const char* key) : _WiFiClient(), _API_KEY(key), _History() {
+ChatClient::ChatClient(const char* key) : _WiFiClient(), _API_KEY(key), _History(), _System() {
   constexpr static const char* root_ca = \
     "-----BEGIN CERTIFICATE-----\n" \
     "MIIDdzCCAl+gAwIBAgIEAgAAuTANBgkqhkiG9w0BAQUFADBaMQswCQYDVQQGEwJJ\n" \
@@ -36,11 +36,12 @@ ChatClient::ChatClient(const char* key) : _WiFiClient(), _API_KEY(key), _History
   _WiFiClient.setCACert(root_ca);
 }
 
-ChatClient::ChatClient(const char* key, const char* rootCA) : _WiFiClient(), _API_KEY(key), _History() {
+ChatClient::ChatClient(const char* key, const char* rootCA) : _WiFiClient(), _API_KEY(key), _History(), _System() {
   _WiFiClient.setCACert(rootCA);
 }
 
 void ChatClient::begin() {
+  _System.clear();
   _History.clear();
   _MaxHistory = 5;
   _TimeOut = 0;
@@ -89,6 +90,11 @@ String ChatClient::MakePayload(const char* msg) const {
   doc["model"] = "gpt-3.5-turbo";
   auto messages = doc["messages"];
   bool user = true;
+  for (const auto& s : _System) {
+    auto message = messages.createNestedObject();
+    message["role"] = "system";
+    message["content"] = s;
+  }
   for (const auto& h : _History) {
     auto message = messages.createNestedObject();
     message["role"] = user ? "user" : "assistant";
@@ -101,8 +107,6 @@ String ChatClient::MakePayload(const char* msg) const {
 
   String payload;
   ::serializeJson(doc, payload);
-
-  Serial.println(payload);
   return payload;
 }
 
@@ -128,4 +132,12 @@ void ChatClient::PurgeHistory() {
   if (overflow > 0) {
     _History.erase(_History.begin(), _History.begin() + overflow);
   }
+}
+
+void ChatClient::ClearSystem() {
+  _System.clear();
+}
+
+void ChatClient::AddSystem(const char* content) {
+  _System.push_back(content);
 }
