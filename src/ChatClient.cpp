@@ -7,6 +7,9 @@
 #include "ChatClient.hpp"
 
 namespace {
+constexpr static const char* API_HOST = "api.openai.com";
+constexpr static int API_PORT = 443;
+constexpr static const char* API = "/v1/chat/completions";
 constexpr static const char* API_URL = "https://api.openai.com/v1/chat/completions";
 }  // namespace
 
@@ -85,9 +88,73 @@ bool ChatClient::Chat(const char* message, String& response, ChatUsage* usage) {
   return true;
 }
 
-String ChatClient::MakePayload(const char* msg) const {
-  StaticJsonDocument<1024> doc;
+bool ChatClient::ChatStream(const char* message, void (*callback)(const char*)) {
+  String response;
+  return ChatStream(message, callback);
+}
+
+bool ChatClient::ChatStream(const char* message, String& response, void (*callback)(const char*)) {
+  if (!_WiFiClient.connect(API_HOST, API_PORT)) {
+    return false;
+  }
+  const auto payload = MakePayload(message, true);
+  _WiFiClient.print(String("POST ") + API + " HTTP/1.1\r\n" +
+                    "Host: " + API_HOST + "\r\n" +
+                    "Authorization: Bearer " + _API_KEY + "\r\n" +
+                    "Content-Type: application/json\r\n" +
+                    "Content-Length: " + payload.length() + "\r\n\r\n" +
+                    payload);
+
+  int httpResCode = -1;
+  bool beginBody = false;
+  response = "";
+  auto period = ::millis();
+  while(_TimeOut <= 0 || (::millis() - period) < _TimeOut) {
+    ::delay(100);
+    while (_WiFiClient.available()) {
+      String line = _WiFiClient.readStringUntil('\n');
+      if (!beginBody) {
+        if (line.startsWith("HTTP/")) {
+          const auto pos = line.indexOf(' ') + 1;
+          httpResCode = line.substring(pos, line.indexOf(' ', pos)).toInt();
+        } else if (line == "\r") {
+          if (httpResCode != HTTP_CODE_OK) {
+            _WiFiClient.stop(); 
+            return false;
+          }
+          beginBody = true;
+        }
+      } else if (line.startsWith("data: ")) {
+        const auto body = line.substring(6);
+        if (body == "[DONE]") {
+          _WiFiClient.stop(); 
+          String m = message;
+          AddHistory(m, response);
+          return true;
+        }
+        DynamicJsonDocument doc(1024);
+        auto error = ::deserializeJson(doc, body.c_str());
+        const char* data = doc["choices"][0]["delta"]["content"];
+        if (data) {
+          response += data;
+          if (callback) {
+            callback(data);
+          }
+        }
+      }
+      period = ::millis();
+    }
+  }
+  _WiFiClient.stop(); 
+  return false;
+}
+
+String ChatClient::MakePayload(const char* msg, bool isStream) const {
+  StaticJsonDocument<4096> doc;
   doc["model"] = "gpt-3.5-turbo";
+  if (isStream) {
+    doc["stream"] = true;    
+  }
   auto messages = doc["messages"];
   bool user = true;
   for (const auto& s : _System) {

@@ -33,6 +33,8 @@ class ChatClient {
   void AddSystem(const char* content);
   
   bool Chat(const char* message, String& response, ChatUsage* usage = nullptr);
+  bool ChatStream(const char* message, void (*callback)(const char*) = nullptr);
+  bool ChatStream(const char* message, String& response, void (*callback)(const char*) = nullptr);
 
   uint16_t TimeOut() const {
     return _TimeOut;
@@ -48,7 +50,7 @@ class ChatClient {
   void ClearHistory();
 
  private:
-  String MakePayload(const char* msg) const;
+  String MakePayload(const char* msg, bool isStream = false) const;
   void AddHistory(String& message, String& response);
   void PurgeHistory();
 };
