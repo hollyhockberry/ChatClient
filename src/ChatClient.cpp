@@ -13,6 +13,7 @@ constexpr static const char* API = "/v1/chat/completions";
 constexpr static const char* API_URL = "https://api.openai.com/v1/chat/completions";
 }  // namespace
 
+#ifndef CHATCLIENT_PURGE_CA_CERT_
 ChatClient::ChatClient(const char* key) : _WiFiClient(), _API_KEY(key), _History(), _System() {
   constexpr static const char* root_ca = \
     "-----BEGIN CERTIFICATE-----\n" \
@@ -38,6 +39,7 @@ ChatClient::ChatClient(const char* key) : _WiFiClient(), _API_KEY(key), _History
     "-----END CERTIFICATE-----\n";
   _WiFiClient.setCACert(root_ca);
 }
+#endif  // CHATCLIENT_PURGE_CA_CERT_
 
 ChatClient::ChatClient(const char* key, const char* rootCA) : _WiFiClient(), _API_KEY(key), _History(), _System() {
   _WiFiClient.setCACert(rootCA);

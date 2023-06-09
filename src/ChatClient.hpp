@@ -25,7 +25,9 @@ class ChatClient {
  
  public:
   ChatClient(const char* key, const char* rootCA);
+#ifndef CHATCLIENT_PURGE_CA_CERT_
   ChatClient(const char* key);
+#endif  //CHATCLIENT_PURGE_CA_CERT_
 
   void begin();
 
