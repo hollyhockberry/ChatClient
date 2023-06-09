@@ -149,28 +149,30 @@ bool ChatClient::ChatStream(const char* message, String& response, void (*callba
   return false;
 }
 
+namespace {
+void AddMessage(JsonArray& array, const char* role, const char* content) {
+  auto message = array.createNestedObject();
+  message["role"] = role;
+  message["content"] = content;
+}
+}  // namespace
+
 String ChatClient::MakePayload(const char* msg, bool isStream) const {
   StaticJsonDocument<4096> doc;
   doc["model"] = "gpt-3.5-turbo";
   if (isStream) {
     doc["stream"] = true;    
   }
-  auto messages = doc["messages"];
+  auto messages = doc.createNestedArray("messages");
   bool user = true;
   for (const auto& s : _System) {
-    auto message = messages.createNestedObject();
-    message["role"] = "system";
-    message["content"] = s;
+    AddMessage(messages, "system", s.c_str());
   }
   for (const auto& h : _History) {
-    auto message = messages.createNestedObject();
-    message["role"] = user ? "user" : "assistant";
-    message["content"] = h;
+    AddMessage(messages, user ? "user" : "assistant", h.c_str());
     user = !user;
   }
-  auto message = messages.createNestedObject();
-  message["role"] = "user";
-  message["content"] = msg;
+  AddMessage(messages, "user", msg);
 
   String payload;
   ::serializeJson(doc, payload);
