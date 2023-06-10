@@ -92,7 +92,7 @@ bool ChatClient::Chat(const char* message, String& response, ChatUsage* usage) {
 
 bool ChatClient::ChatStream(const char* message, void (*callback)(const char*)) {
   String response;
-  return ChatStream(message, callback);
+  return ChatStream(message, response, callback);
 }
 
 bool ChatClient::ChatStream(const char* message, String& response, void (*callback)(const char*)) {
