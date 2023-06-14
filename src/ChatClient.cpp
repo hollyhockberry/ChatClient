@@ -164,7 +164,7 @@ void AddMessage(JsonArray& array, const char* role, const char* content) {
 }  // namespace
 
 String ChatClient::MakePayload(const char* msg, bool isStream) const {
-  StaticJsonDocument<4096> doc;
+  static StaticJsonDocument<4096> doc;
   doc["model"] = _Model;
   if (isStream) {
     doc["stream"] = true;    
