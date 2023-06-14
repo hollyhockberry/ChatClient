@@ -22,6 +22,7 @@ class ChatClient {
   std::vector<String> _History;
   int _MaxHistory = 5;
   uint16_t _TimeOut = 0;
+  String _Model = "gpt-3.5-turbo";
  
  public:
   ChatClient(const char* key, const char* rootCA);
@@ -30,6 +31,8 @@ class ChatClient {
 #endif  //CHATCLIENT_PURGE_CA_CERT_
 
   void begin();
+
+  void Model(const char* model);
 
   void ClearSystem();
   void AddSystem(const char* content);

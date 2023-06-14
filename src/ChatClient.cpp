@@ -52,6 +52,10 @@ void ChatClient::begin() {
   _TimeOut = 0;
 }
 
+void ChatClient::Model(const char* model) {
+  _Model = model;
+}
+
 bool ChatClient::Chat(const char* message, String& response, ChatUsage* usage) {
   HTTPClient http;
   if (_TimeOut > 0) {
@@ -161,7 +165,7 @@ void AddMessage(JsonArray& array, const char* role, const char* content) {
 
 String ChatClient::MakePayload(const char* msg, bool isStream) const {
   StaticJsonDocument<4096> doc;
-  doc["model"] = "gpt-3.5-turbo";
+  doc["model"] = _Model;
   if (isStream) {
     doc["stream"] = true;    
   }
