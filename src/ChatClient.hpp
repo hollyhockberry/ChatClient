@@ -25,10 +25,7 @@ class ChatClient {
   String _Model = "gpt-3.5-turbo";
  
  public:
-  ChatClient(const char* key, const char* rootCA);
-#ifndef CHATCLIENT_PURGE_CA_CERT_
-  ChatClient(const char* key);
-#endif  //CHATCLIENT_PURGE_CA_CERT_
+  ChatClient(const char* key, const char* rootCA = nullptr);
 
   void begin();
 
