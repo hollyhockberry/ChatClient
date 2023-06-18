@@ -16,8 +16,8 @@ struct ChatUsage {
 };
 
 class ChatClient {
-  WiFiClientSecure _WiFiClient;
-  const String _API_KEY;
+  const char* _API_KEY;
+  const char* _rootCACertificate;
   std::vector<String> _System;
   std::vector<String> _History;
   int _MaxHistory = 5;
@@ -25,7 +25,7 @@ class ChatClient {
   String _Model = "gpt-3.5-turbo";
  
  public:
-  ChatClient(const char* key, const char* rootCA = nullptr);
+  ChatClient(const char* key, const char* rootCACertificate = nullptr);
 
   void begin();
 
@@ -52,6 +52,8 @@ class ChatClient {
   void ClearHistory();
 
  private:
+  bool ChatStream(WiFiClientSecure& client, const char* message, String& response, void (*callback)(const char*));
+
   String MakePayload(const char* msg, bool isStream = false) const;
   void AddHistory(String& message, String& response);
   void PurgeHistory();

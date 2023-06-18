@@ -13,12 +13,8 @@ constexpr static const char* API = "/v1/chat/completions";
 constexpr static const char* API_URL = "https://api.openai.com/v1/chat/completions";
 }  // namespace
 
-ChatClient::ChatClient(const char* key, const char* rootCA) : _WiFiClient(), _API_KEY(key), _History(), _System() {
-  if (rootCA) {
-    _WiFiClient.setCACert(rootCA);
-  } else {
-    _WiFiClient.setInsecure();
-  }
+ChatClient::ChatClient(const char* key, const char* rootCACertificate)
+: _API_KEY(key), _rootCACertificate(rootCACertificate), _History(), _System() {
 }
 
 void ChatClient::begin() {
@@ -33,23 +29,34 @@ void ChatClient::Model(const char* model) {
 }
 
 bool ChatClient::Chat(const char* message, String& response, ChatUsage* usage) {
-  HTTPClient http;
-  if (_TimeOut > 0) {
-    http.setTimeout(_TimeOut);
-  }
-  if (!http.begin(_WiFiClient, API_URL)) {
-    return false;
-  }
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization", String("Bearer ") + _API_KEY);
-  const auto code = http.POST(MakePayload(message));
-  if (code != HTTP_CODE_OK) {
-    http.end();
-    return false;
-  }
-  const auto payload = http.getString();
-  http.end();
+  auto client = new WiFiClientSecure();
+  auto http = new HTTPClient();
 
+  if (_rootCACertificate) {
+    client->setCACert(_rootCACertificate);
+  } else {
+    client->setInsecure();
+  }
+  if (_TimeOut > 0) {
+    http->setTimeout(_TimeOut);
+  }
+  if (!http->begin(*client, API_URL)) {
+    delete http;
+    delete client;
+    return false;
+  }
+  http->addHeader("Content-Type", "application/json");
+  http->addHeader("Authorization", String("Bearer ") + _API_KEY);
+
+  const auto code = http->POST(MakePayload(message));
+  const auto payload = http->getString();
+  http->end();
+  delete http;
+  delete client;
+
+  if (code != HTTP_CODE_OK) {
+    return false;
+  }
   DynamicJsonDocument doc(1024);
   if (::deserializeJson(doc, payload.c_str())) {
     return false;
@@ -70,22 +77,22 @@ bool ChatClient::Chat(const char* message, String& response, ChatUsage* usage) {
   return true;
 }
 
-bool ChatClient::ChatStream(const char* message, void (*callback)(const char*)) {
-  String response;
-  return ChatStream(message, response, callback);
-}
-
-bool ChatClient::ChatStream(const char* message, String& response, void (*callback)(const char*)) {
-  if (!_WiFiClient.connect(API_HOST, API_PORT)) {
+bool ChatClient::ChatStream(WiFiClientSecure& client, const char* message, String& response, void (*callback)(const char*)) {
+  if (_rootCACertificate) {
+    client.setCACert(_rootCACertificate);
+  } else {
+    client.setInsecure();
+  }
+  if (!client.connect(API_HOST, API_PORT)) {
     return false;
   }
   const auto payload = MakePayload(message, true);
-  _WiFiClient.print(String("POST ") + API + " HTTP/1.1\r\n" +
-                    "Host: " + API_HOST + "\r\n" +
-                    "Authorization: Bearer " + _API_KEY + "\r\n" +
-                    "Content-Type: application/json\r\n" +
-                    "Content-Length: " + payload.length() + "\r\n\r\n" +
-                    payload);
+  client.print(String("POST ") + API + " HTTP/1.1\r\n" +
+               "Host: " + API_HOST + "\r\n" +
+               "Authorization: Bearer " + _API_KEY + "\r\n" +
+               "Content-Type: application/json\r\n" +
+               "Content-Length: " + payload.length() + "\r\n\r\n" +
+               payload);
 
   int httpResCode = -1;
   bool beginBody = false;
@@ -93,15 +100,15 @@ bool ChatClient::ChatStream(const char* message, String& response, void (*callba
   auto period = ::millis();
   while(_TimeOut <= 0 || (::millis() - period) < _TimeOut) {
     ::delay(100);
-    while (_WiFiClient.available()) {
-      String line = _WiFiClient.readStringUntil('\n');
+    while (client.available()) {
+      String line = client.readStringUntil('\n');
       if (!beginBody) {
         if (line.startsWith("HTTP/")) {
           const auto pos = line.indexOf(' ') + 1;
           httpResCode = line.substring(pos, line.indexOf(' ', pos)).toInt();
         } else if (line == "\r") {
           if (httpResCode != HTTP_CODE_OK) {
-            _WiFiClient.stop(); 
+            client.stop(); 
             return false;
           }
           beginBody = true;
@@ -109,7 +116,7 @@ bool ChatClient::ChatStream(const char* message, String& response, void (*callba
       } else if (line.startsWith("data: ")) {
         const auto body = line.substring(6);
         if (body == "[DONE]") {
-          _WiFiClient.stop(); 
+          client.stop(); 
           String m = message;
           AddHistory(m, response);
           return true;
@@ -127,8 +134,20 @@ bool ChatClient::ChatStream(const char* message, String& response, void (*callba
       period = ::millis();
     }
   }
-  _WiFiClient.stop(); 
+  client.stop(); 
   return false;
+}
+
+bool ChatClient::ChatStream(const char* message, void (*callback)(const char*)) {
+  String response;
+  return ChatStream(message, response, callback);
+}
+
+bool ChatClient::ChatStream(const char* message, String& response, void (*callback)(const char*)) {
+  auto client = new WiFiClientSecure();
+  const auto ret = ChatStream(*client, message, response, callback);
+  delete client;
+  return ret;
 }
 
 namespace {
