@@ -16,8 +16,8 @@ struct ChatUsage {
 };
 
 class ChatClient {
-  const char* _API_KEY;
-  const char* _rootCACertificate;
+  const char* _API_KEY = nullptr;
+  const char* _rootCACertificate = nullptr;
   std::vector<String> _System;
   std::vector<String> _History;
   int _MaxHistory = 5;
@@ -25,10 +25,14 @@ class ChatClient {
   String _Model = "gpt-3.5-turbo";
  
  public:
-  ChatClient(const char* key, const char* rootCACertificate = nullptr);
+  ChatClient();
+  explicit ChatClient(const char* key);
+  ChatClient(const char* key, const char* rootCACertificate);
 
   void begin();
 
+  void ApiKey(const char* key);
+  const char* ApiKey() const;
   void Model(const char* model);
 
   void ClearSystem();

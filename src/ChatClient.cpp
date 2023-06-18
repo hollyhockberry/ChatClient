@@ -13,6 +13,12 @@ constexpr static const char* API = "/v1/chat/completions";
 constexpr static const char* API_URL = "https://api.openai.com/v1/chat/completions";
 }  // namespace
 
+ChatClient::ChatClient() : ChatClient(nullptr, nullptr) {
+}
+
+ChatClient::ChatClient(const char* key) : ChatClient(key, nullptr) {
+}
+
 ChatClient::ChatClient(const char* key, const char* rootCACertificate)
 : _API_KEY(key), _rootCACertificate(rootCACertificate), _History(), _System() {
 }
@@ -24,11 +30,22 @@ void ChatClient::begin() {
   _TimeOut = 0;
 }
 
+void ChatClient::ApiKey(const char* key) {
+  _API_KEY = key;
+}
+
+const char* ChatClient::ApiKey() const {
+  return _API_KEY;
+}
+
 void ChatClient::Model(const char* model) {
   _Model = model;
 }
 
 bool ChatClient::Chat(const char* message, String& response, ChatUsage* usage) {
+  if (_API_KEY == nullptr) {
+    return false;
+  }
   auto client = new WiFiClientSecure();
   auto http = new HTTPClient();
 
@@ -78,6 +95,9 @@ bool ChatClient::Chat(const char* message, String& response, ChatUsage* usage) {
 }
 
 bool ChatClient::ChatStream(WiFiClientSecure& client, const char* message, String& response, void (*callback)(const char*)) {
+  if (_API_KEY == nullptr) {
+    return false;
+  }
   if (_rootCACertificate) {
     client.setCACert(_rootCACertificate);
   } else {
