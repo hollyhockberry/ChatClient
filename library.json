@@ -1,4 +1,21 @@
 {
   "name": "ChatClient",
-  "version": "0.0.0"
+  "description": "Library for ChatGPT",
+  "keywords": "ChatGPT",
+  "authors": {
+    "name": "hollyhockberry",
+    "url": "https://github.com/hollyhockberry/ChatClient"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hollyhockberry/ChatClient.git"
+  },
+  "dependencies": [
+    {
+      "name": "ArduinoJson",
+      "version": ">=6.21.2"
+    }
+  ],
+  "version": "0.0.0",
+  "headers": "ChatClient.h"
 }
